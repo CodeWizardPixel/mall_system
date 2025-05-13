@@ -2,5 +2,23 @@
   "dependencies": {
     "express": "^5.1.0",
     "pg": "^8.16.0"
-  }
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "name": "mall_system",
+  "version": "1.0.0",
+  "main": "server.js",
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CodeWizardPixel/mall_system.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/CodeWizardPixel/mall_system/issues"
+  },
+  "homepage": "https://github.com/CodeWizardPixel/mall_system#readme",
+  "description": ""
 }
