@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Аренда помещений в ТЦ</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .space-card {
+            transition: transform 0.3s;
+            margin-bottom: 20px;
+        }
+
+        .space-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .admin-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="#">Аренда помещений</a>
+            <a href="admin.html" class="btn btn-outline-light">Вход для администратора</a>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <h1 class="text-center mb-4">Доступные помещения</h1>
+
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Фильтры</h5>
+                        <div class="row">
+                            <div class="col-md-3">
+                                <label class="form-label">Этаж</label>
+                                <select class="form-select" id="floorFilter" onchange="applyFilters()">
+                                    <option value="">Все этажи</option>
+                                    <option value="1">1 этаж</option>
+                                    <option value="2">2 этаж</option>
+                                    <option value="3">3 этаж</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Площадь</label>
+                                <select class="form-select" id="areaFilter" onchange="applyFilters()">
+                                    <option value="">Любая площадь</option>
+                                    <option value="0-50">До 50 м²</option>
+                                    <option value="50-100">50-100 м²</option>
+                                    <option value="100-150">100-150 м²</option>
+                                    <option value="150+">Более 150 м²</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Стоимость</label>
+                                <select class="form-select" id="priceFilter" onchange="applyFilters()">
+                                    <option value="">Любая стоимость</option>
+                                    <option value="0-50000">До 50 000 ₽</option>
+                                    <option value="50000-100000">50 000 - 100 000 ₽</option>
+                                    <option value="100000-150000">100 000 - 150 000 ₽</option>
+                                    <option value="150000+">Более 150 000 ₽</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Сортировка</label>
+                                <select class="form-select" id="sortFilter" onchange="applyFilters()">
+                                    <option value="default">По умолчанию</option>
+                                    <option value="price-asc">По возрастанию цены</option>
+                                    <option value="price-desc">По убыванию цены</option>
+                                    <option value="area-asc">По возрастанию площади</option>
+                                    <option value="area-desc">По убыванию площади</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row" id="spacesList"></div>
+    </div>
+
+    <div class="modal fade" id="rentModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Заявка на аренду</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="rentForm">
+                        <input type="hidden" id="roomId">
+                        <div class="mb-3">
+                            <label class="form-label">Название организации</label>
+                            <input type="text" class="form-control" id="name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">ФИО контактного лица</label>
+                            <input type="text" class="form-control" id="contact_details" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Телефон</label>
+                            <input type="tel" class="form-control" id="phone" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">ИНН/ОГРН</label>
+                            <input type="text" class="form-control" id="tax_id" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="button" class="btn btn-primary" onclick="submitRentForm()">Отправить заявку</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let spaces = [];
+        let rentModal;
+
+        document.addEventListener('DOMContentLoaded', function () {
+            rentModal = new bootstrap.Modal(document.getElementById('rentModal'));
+            fetchSpaces();
+        });
+
+        async function fetchSpaces() {
+            try {
+                const response = await fetch('/api/rooms');
+                spaces = await response.json();
+                applyFilters();
+            } catch (error) {
+                console.error('Error fetching spaces:', error);
+            }
+        }
+
+        function applyFilters() {
+            const floorFilter = document.getElementById('floorFilter').value;
+            const areaFilter = document.getElementById('areaFilter').value;
+            const priceFilter = document.getElementById('priceFilter').value;
+            const sortFilter = document.getElementById('sortFilter').value;
+
+            let filteredSpaces = [...spaces];
+
+            if (floorFilter) {
+                filteredSpaces = filteredSpaces.filter(space => space.floor === parseInt(floorFilter));
+            }
+
+            if (areaFilter) {
+                const [min, max] = areaFilter.split('-').map(val => val === '+' ? Infinity : parseInt(val));
+                filteredSpaces = filteredSpaces.filter(space => {
+                    if (max === Infinity) return space.area >= min;
+                    return space.area >= min && space.area < max;
+                });
+            }
+
+            if (priceFilter) {
+                const [min, max] = priceFilter.split('-').map(val => val === '+' ? Infinity : parseInt(val));
+                filteredSpaces = filteredSpaces.filter(space => {
+                    if (max === Infinity) return space.rent_cost >= min;
+                    return space.rent_cost >= min && space.rent_cost < max;
+                });
+            }
+
+            switch (sortFilter) {
+                case 'price-asc':
+                    filteredSpaces.sort((a, b) => a.rent_cost - b.rent_cost);
+                    break;
+                case 'price-desc':
+                    filteredSpaces.sort((a, b) => b.rent_cost - a.rent_cost);
+                    break;
+                case 'area-asc':
+                    filteredSpaces.sort((a, b) => a.area - b.area);
+                    break;
+                case 'area-desc':
+                    filteredSpaces.sort((a, b) => b.area - a.area);
+                    break;
+            }
+
+            const spacesList = document.getElementById('spacesList');
+            spacesList.innerHTML = filteredSpaces.map(space => `
+                <div class="col-md-4">
+                    <div class="card space-card">
+                        <div class="card-body">
+                            <h5 class="card-title">Помещение №${space.id}</h5>
+                            <p class="card-text">
+                                <strong>Площадь:</strong> ${space.area} м²<br>
+                                <strong>Этаж:</strong> ${space.floor}<br>
+                                <strong>Тип:</strong> ${space.type === 'retail' ? 'Торговое' : 'Складское'}<br>
+                                <strong>Статус:</strong> ${space.status === 'free' ? 'Свободно' : 'Занято'}<br>
+                                <strong>Цена:</strong> ${space.rent_cost.toLocaleString()} ₽/мес
+                            </p>
+                            <button class="btn btn-primary" onclick="openRentModal('${space.id}')" ${space.status === 'occupied' ? 'disabled' : ''}>
+                                ${space.status === 'free' ? 'Оформить заявку' : 'Занято'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openRentModal(spaceId) {
+            document.getElementById('roomId').value = spaceId;
+            document.getElementById('rentForm').reset();
+            rentModal.show();
+        }
+
+        async function submitRentForm() {
+            const formData = {
+                name: document.getElementById('name').value,
+                contact_details: document.getElementById('contact_details').value,
+                phone: document.getElementById('phone').value,
+                email: document.getElementById('email').value,
+                tax_id: document.getElementById('tax_id').value,
+                room_id: document.getElementById('roomId').value
+            };
+
+            try {
+                const response = await fetch('/api/rental-requests', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to submit request');
+                }
+
+                alert('Заявка успешно отправлена!');
+                rentModal.hide();
+                await fetchSpaces();
+            } catch (error) {
+                console.error('Error submitting request:', error);
+                alert('Ошибка при отправке заявки. Пожалуйста, попробуйте еще раз.');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', fetchSpaces);
+    </script>
+</body>
+
+</html>
